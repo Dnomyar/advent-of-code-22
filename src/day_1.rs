@@ -32,6 +32,7 @@ pub fn dayone_part1() -> Option<u32> {
 
 pub fn dayone_part2() -> Option<u32> {
     let file = read_file("resources/day1.txt");
+    let numberOfElvesToSum: usize = 3;
     let mut pq: PriorityQueue<u32, ()> = PriorityQueue::new();
 
     let group_summed = 
@@ -48,7 +49,7 @@ pub fn dayone_part2() -> Option<u32> {
             };
 
             if should_update_max {
-                if pq.len() >= 3 {
+                if pq.len() >= numberOfElvesToSum {
                     pq.pop();
                 }
                 
