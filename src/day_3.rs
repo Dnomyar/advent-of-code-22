@@ -16,7 +16,6 @@ impl TryFrom<&str> for Rucksack {
     type Error = String;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        println!("FROM {}", value);
         let size = value.len();
         let (left, right) = value.split_at(size/2);
         let rucksack = Rucksack {
@@ -35,15 +34,12 @@ impl TryFrom<char> for Priority {
     type Error = String;
 
     fn try_from(value: char) -> Result<Self, Self::Error> {
-        println!("value={0}", value);
         let n = value as u32;
         if n >= 'a' as u32 && n <= 'z'  as u32 {
             let p = n - 'a' as u32 + 1;
-            println!("p={0}", p);
             return Ok(Priority{ priority: p });
         } else if n >= 'A'  as u32 && n <= 'Z' as u32  {
             let p = n - 'A' as u32 + 27;
-            println!("p={0}", p);
             return Ok(Priority{ priority: p});
         } else {
             return Err(format!("Unable to find priority from ${0}", value))
@@ -101,7 +97,7 @@ mod tests {
     #[test]
     fn part1_resutl(){
         let input = read_file("resources/day3.txt");
-        assert_eq!(part1(&input), Err("".to_string()));
+        assert_eq!(part1(&input), Ok(8394));
     }
 
     
