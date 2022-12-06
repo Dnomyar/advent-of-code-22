@@ -1,26 +1,32 @@
-use std::{collections::HashSet, fs, process::id, str::CharIndices};
+#![feature(control_flow_enum)]
+use std::{collections::HashSet, fs, ops::ControlFlow, process::id, str::CharIndices};
 
 fn read_file(file_name: &str) -> String {
     return fs::read_to_string(file_name).expect("Unable to read the file");
 }
 
+fn hasDuplicateElements(window: &[(usize, char)]) -> bool {
+    let uniqueSetOfElements: HashSet<char> = window.into_iter().map(|a| a.1).collect();
+    return window.len() != uniqueSetOfElements.len();
+}
+
 fn logic(input: &str, numberOfChar: usize) -> Result<usize, String> {
     let charIndices: Vec<(usize, char)> = input.char_indices().collect();
 
-    let a: Vec<usize> = charIndices
-        .windows(numberOfChar)
-        .take_while(|window| {
-            let uniqueSetOfElements: HashSet<char> = window.into_iter().map(|a| a.1).collect();
-            return window.len() != uniqueSetOfElements.len();
-        })
-        .map(|window| {
-            return window[0].0;
-        })
-        .collect();
+    let a: ControlFlow<usize, usize> =
+        charIndices
+            .windows(numberOfChar)
+            .try_fold(numberOfChar, |n, window| {
+                if (hasDuplicateElements(window)) {
+                    return ControlFlow::Continue(n + 1);
+                } else {
+                    return ControlFlow::Break(n);
+                };
+            });
 
-    return match a.last() {
-        Some(idx) => Ok(*idx + numberOfChar + 1),
-        None => Err("could not find".to_string()),
+    return match a {
+        ControlFlow::Break(idx) => Ok(idx),
+        _ => Err("could not find".to_string()),
     };
 }
 
