@@ -1,5 +1,5 @@
 #![feature(control_flow_enum)]
-use std::{collections::HashSet, fs, ops::ControlFlow, process::id, str::CharIndices};
+use std::{collections::HashSet, fs, ops::ControlFlow};
 
 fn read_file(file_name: &str) -> String {
     return fs::read_to_string(file_name).expect("Unable to read the file");
@@ -13,18 +13,18 @@ fn hasDuplicateElements(window: &[(usize, char)]) -> bool {
 fn logic(input: &str, numberOfChar: usize) -> Result<usize, String> {
     let charIndices: Vec<(usize, char)> = input.char_indices().collect();
 
-    let a: ControlFlow<usize, usize> =
+    let maybeWindowIndex: ControlFlow<usize, usize> =
         charIndices
             .windows(numberOfChar)
             .try_fold(numberOfChar, |n, window| {
-                if (hasDuplicateElements(window)) {
+                if hasDuplicateElements(window) {
                     return ControlFlow::Continue(n + 1);
                 } else {
                     return ControlFlow::Break(n);
                 };
             });
 
-    return match a {
+    return match maybeWindowIndex {
         ControlFlow::Break(idx) => Ok(idx),
         _ => Err("could not find".to_string()),
     };
