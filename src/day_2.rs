@@ -17,7 +17,7 @@ pub fn part1(input: &str) -> Option<u32> {
             "A" | "X" => Some(Options::Rock),
             "B" | "Y" => Some(Options::Paper),
             "C" | "Z" => Some(Options::Scissors),
-            letter => None,
+            _letter => None,
         })
     });
 

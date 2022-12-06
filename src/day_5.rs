@@ -1,8 +1,5 @@
 use std::{
-    cmp,
-    collections::{HashMap, HashSet, VecDeque},
     fs,
-    iter::Map,
 };
 
 fn read_file(file_name: &str) -> String {
@@ -59,9 +56,9 @@ fn parse(input: &str) -> (Stacks, Instructions) {
     let mut stackLines = Vec::new();
     let mut instructions = Vec::new();
     for line in input.lines() {
-        if (line.contains("[")) {
+        if line.contains("[") {
             stackLines.push(parse_stack_line(line));
-        } else if (line.starts_with("move")) {
+        } else if line.starts_with("move") {
             instructions.push(parseInstruction(line));
         }
     }

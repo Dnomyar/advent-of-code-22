@@ -1,5 +1,5 @@
 use std::fs;
-use std::iter::Map;
+
 use std::str;
 
 use priority_queue::PriorityQueue;
