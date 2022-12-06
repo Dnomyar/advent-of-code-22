@@ -4,6 +4,4 @@ mod day_3;
 mod day_5;
 // pub use crate::advent_of_code::dayone;
 
-fn main(){
-}
-
+fn main() {}
