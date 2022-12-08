@@ -173,11 +173,8 @@ fn compute_directory_sizes(
 
     let mut directory_sizes: HashMap<ParentDir, u64> = HashMap::new();
 
-    println!("graph keys {:?}", graph.keys());
-
     while !edges_to_visit.is_empty() {
         let front = edges_to_visit.front().unwrap();
-        println!("front {:?}", front);
         let children = graph.get(front).unwrap(); //.unwrap_or(&empty);
         let children_directories: HashSet<_> = children
             .into_iter()
@@ -201,7 +198,6 @@ fn compute_directory_sizes(
                 })
                 .sum();
             directory_sizes.insert(front.clone(), total_size);
-            // res = Some(total_size);
             edges_to_visit.pop_front();
         } else {
             children_directories
@@ -216,32 +212,46 @@ pub fn part1(input: &str) -> Result<u64, String> {
     let commands = parse_input(input).unwrap().1;
     let child_parent_relationship = create_relataionship_from_commands(commands);
 
-    println!();
-    child_parent_relationship
-        .clone()
-        .into_iter()
-        .for_each(|A| println!("{:?}", A));
-    println!();
-
     let graph = create_graph_from_relationships(child_parent_relationship);
-
-    println!();
-    graph.clone().into_iter().for_each(|A| println!("{:?}", A));
-    println!();
 
     let directory_sizes = compute_directory_sizes(graph);
 
+    let high_dir_size_limit = 100000;
     let sum_small_directories: u64 = directory_sizes
         .into_iter()
-        .filter(|(_k, v)| v < &100000)
+        .filter(|(_k, v)| v < &high_dir_size_limit)
         .map(|(_k, v)| v)
         .sum();
 
     return Ok(sum_small_directories);
 }
 
-pub fn part2(_input: &str) -> Result<usize, String> {
-    return todo!();
+pub fn part2(input: &str) -> Result<u64, String> {
+    let commands = parse_input(input).unwrap().1;
+    let child_parent_relationship = create_relataionship_from_commands(commands);
+
+    let graph = create_graph_from_relationships(child_parent_relationship);
+
+    let directory_sizes = compute_directory_sizes(graph);
+
+    let total_size = 70000000;
+    let space_needed = 30000000;
+
+    let space_used = *directory_sizes
+        .get(&ParentDir {
+            name: "/".to_string(),
+        })
+        .unwrap();
+
+    let maybe_directory_to_remove: Option<(ParentDir, u64)> = directory_sizes
+        .into_iter()
+        .sorted_by_key(|(_, v)| *v)
+        .find(|(_, directory_size)| space_used - directory_size <= total_size - space_needed);
+
+    return match maybe_directory_to_remove {
+        Some((_, dir_size)) => Ok(dir_size),
+        None => Err("not found".to_string()),
+    };
 }
 
 #[cfg(test)]
@@ -252,7 +262,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test() {
+    fn test_example_part1() {
         let input = "$ cd /
 $ ls
 dir a
@@ -279,6 +289,34 @@ $ ls
         assert_eq!(part1(input), Ok(95437));
     }
 
+    #[test]
+    fn test_example_part2() {
+        let input = "$ cd /
+$ ls
+dir a
+14848514 b.txt
+8504156 c.dat
+dir d
+$ cd a
+$ ls
+dir e
+29116 f
+2557 g
+62596 h.lst
+$ cd e
+$ ls
+584 i
+$ cd ..
+$ cd ..
+$ cd d
+$ ls
+4060174 j
+8033020 d.log
+5626152 d.ext
+7214296 k";
+        assert_eq!(part2(input), Ok(24933642));
+    }
+
     fn read_file(file_name: &str) -> String {
         return fs::read_to_string(file_name).expect("Unable to read the file");
     }
@@ -300,6 +338,12 @@ $ ls
     #[test]
     fn part1_result() {
         let input = read_file("resources/day7.txt");
-        assert_eq!(part1(&input), Ok(0));
+        assert_eq!(part1(&input), Ok(1182909));
+    }
+
+    #[test]
+    fn part2_result() {
+        let input = read_file("resources/day7.txt");
+        assert_eq!(part2(&input), Ok(2832508));
     }
 }
