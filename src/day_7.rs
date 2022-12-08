@@ -115,15 +115,9 @@ fn parseInput(input: &str) -> IResult<&str, Vec<Command>> {
     })(input);
 }
 
-pub fn part1(input: &str) -> Result<u64, String> {
-    println!("helle");
-
+fn create_relataionship_from_commands(commands: Vec<Command>) -> HashMap<FileType, ParentDir> {
     let mut current_directory_deque: VecDeque<String> = VecDeque::new();
     let mut child_parent_relationship: HashMap<FileType, ParentDir> = HashMap::new();
-    let commands = parseInput(input).unwrap().1;
-
-    println!("commands {:?}", commands);
-
     for command in commands {
         match command {
             Command::Cd { to } => {
@@ -153,10 +147,13 @@ pub fn part1(input: &str) -> Result<u64, String> {
             }
         }
     }
+    return child_parent_relationship;
+}
 
-    println!("map {:?}", child_parent_relationship);
-
-    let graph: HashMap<ParentDir, HashSet<FileType>> = child_parent_relationship
+fn create_graph_from_relationships(
+    file_parent_map: HashMap<FileType, ParentDir>,
+) -> HashMap<ParentDir, HashSet<FileType>> {
+    return file_parent_map
         .clone()
         .into_iter()
         .into_group_map_by(|a| a.1.clone())
@@ -170,17 +167,16 @@ pub fn part1(input: &str) -> Result<u64, String> {
             )
         })
         .collect();
+}
 
-    println!("");
-    graph.clone().into_iter().for_each(|e| println!("{:?}", e));
-    println!("");
-
+fn compute_directory_sizes(
+    graph: HashMap<ParentDir, HashSet<FileType>>,
+) -> HashMap<ParentDir, u64> {
     let mut edges_to_visit = VecDeque::from([ParentDir {
         name: "/".to_string(),
     }]);
 
     let mut directory_sizes: HashMap<ParentDir, u64> = HashMap::new();
-    println!("starting");
 
     while !edges_to_visit.is_empty() {
         let front = edges_to_visit.front().unwrap();
@@ -215,7 +211,14 @@ pub fn part1(input: &str) -> Result<u64, String> {
                 .for_each(|directory| edges_to_visit.push_front(directory));
         }
     }
-    println!("res {:?}", directory_sizes);
+    return directory_sizes;
+}
+
+pub fn part1(input: &str) -> Result<u64, String> {
+    let commands = parseInput(input).unwrap().1;
+    let child_parent_relationship = create_relataionship_from_commands(commands);
+    let graph = create_graph_from_relationships(child_parent_relationship);
+    let directory_sizes = compute_directory_sizes(graph);
 
     let sum_small_directories: u64 = directory_sizes
         .into_iter()
