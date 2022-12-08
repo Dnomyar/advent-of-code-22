@@ -1,8 +1,6 @@
 use std::{
     collections::{HashMap, HashSet, VecDeque},
-    f64::consts::E,
     hash::Hash,
-    io::ErrorKind,
 };
 
 use itertools::Itertools;
@@ -11,7 +9,6 @@ use nom::{
     bytes::streaming::tag,
     character::complete::{char, digit1, not_line_ending},
     combinator::map_res,
-    error::ParseError,
     multi::separated_list1,
     sequence::{preceded, tuple},
     IResult, Parser,
@@ -60,7 +57,7 @@ impl FileTypeOps for FileType {
 
     fn get_file_size(&self) -> Option<&u64> {
         match self {
-            FileType::File { name, size } => Some(size),
+            FileType::File { name: _, size } => Some(size),
             _ => None,
         }
     }
@@ -70,7 +67,7 @@ fn not_line_ending2(input: &str) -> IResult<&str, &str> {
     not_line_ending(input)
 }
 
-fn parseInput(input: &str) -> IResult<&str, Vec<Command>> {
+fn parse_input(input: &str) -> IResult<&str, Vec<Command>> {
     let cd = preceded(
         tag("$ cd "),
         map_res(not_line_ending2, |e: &str| -> Result<Vec<Command>, &str> {
@@ -119,6 +116,9 @@ fn create_relataionship_from_commands(commands: Vec<Command>) -> HashMap<FileTyp
     let mut current_directory_deque: VecDeque<String> = VecDeque::new();
     let mut child_parent_relationship: HashMap<FileType, ParentDir> = HashMap::new();
     for command in commands {
+        let parent_dir = ParentDir {
+            name: (&current_directory_deque).into_iter().rev().join("/"),
+        };
         match command {
             Command::Cd { to } => {
                 if to == ".." {
@@ -128,18 +128,17 @@ fn create_relataionship_from_commands(commands: Vec<Command>) -> HashMap<FileTyp
                 }
             }
             Command::Dir { name } => {
-                let parent_dir = ParentDir {
-                    name: current_directory_deque.front().unwrap().to_string(),
-                };
-                child_parent_relationship.insert(FileType::Dir { name: name }, parent_dir);
+                child_parent_relationship.insert(
+                    FileType::Dir {
+                        name: parent_dir.name.to_string() + "/" + &name,
+                    },
+                    parent_dir,
+                );
             }
             Command::File { name, size } => {
-                let parent_dir = ParentDir {
-                    name: current_directory_deque.front().unwrap().to_string(),
-                };
                 child_parent_relationship.insert(
                     FileType::File {
-                        name: name,
+                        name: parent_dir.name.to_string() + "/" + &name,
                         size: size,
                     },
                     parent_dir,
@@ -153,19 +152,15 @@ fn create_relataionship_from_commands(commands: Vec<Command>) -> HashMap<FileTyp
 fn create_graph_from_relationships(
     file_parent_map: HashMap<FileType, ParentDir>,
 ) -> HashMap<ParentDir, HashSet<FileType>> {
-    return file_parent_map
+    let map_of_vec: HashMap<ParentDir, Vec<FileType>> = file_parent_map
         .clone()
         .into_iter()
-        .into_group_map_by(|a| a.1.clone())
+        .map(|(k, v)| (v, k))
+        .into_group_map();
+
+    return map_of_vec
         .into_iter()
-        .map(|(k, v)| {
-            (
-                k,
-                v.into_iter()
-                    .map(|(fileType, _)| fileType)
-                    .collect::<HashSet<FileType>>(),
-            )
-        })
+        .map(|(k, v)| (k, v.into_iter().collect::<HashSet<FileType>>()))
         .collect();
 }
 
@@ -178,8 +173,11 @@ fn compute_directory_sizes(
 
     let mut directory_sizes: HashMap<ParentDir, u64> = HashMap::new();
 
+    println!("graph keys {:?}", graph.keys());
+
     while !edges_to_visit.is_empty() {
         let front = edges_to_visit.front().unwrap();
+        println!("front {:?}", front);
         let children = graph.get(front).unwrap(); //.unwrap_or(&empty);
         let children_directories: HashSet<_> = children
             .into_iter()
@@ -199,7 +197,7 @@ fn compute_directory_sizes(
                     FileType::Dir { name } => directory_sizes.get(&ParentDir {
                         name: name.to_string(),
                     }),
-                    file @ FileType::File { name, size } => child.get_file_size(),
+                    _file @ FileType::File { name: _, size: _ } => child.get_file_size(),
                 })
                 .sum();
             directory_sizes.insert(front.clone(), total_size);
@@ -215,34 +213,43 @@ fn compute_directory_sizes(
 }
 
 pub fn part1(input: &str) -> Result<u64, String> {
-    let commands = parseInput(input).unwrap().1;
+    let commands = parse_input(input).unwrap().1;
     let child_parent_relationship = create_relataionship_from_commands(commands);
+
+    println!();
+    child_parent_relationship
+        .clone()
+        .into_iter()
+        .for_each(|A| println!("{:?}", A));
+    println!();
+
     let graph = create_graph_from_relationships(child_parent_relationship);
+
+    println!();
+    graph.clone().into_iter().for_each(|A| println!("{:?}", A));
+    println!();
+
     let directory_sizes = compute_directory_sizes(graph);
 
     let sum_small_directories: u64 = directory_sizes
         .into_iter()
-        .filter(|(k, v)| v < &100000)
-        .map(|(k, v)| v)
+        .filter(|(_k, v)| v < &100000)
+        .map(|(_k, v)| v)
         .sum();
 
     return Ok(sum_small_directories);
 }
 
-pub fn part2(input: &str) -> Result<usize, String> {
+pub fn part2(_input: &str) -> Result<usize, String> {
     return todo!();
 }
 
 #[cfg(test)]
 mod tests {
-    use nom::IResult;
+
+    use std::fs;
 
     use super::*;
-
-    // #[test]
-    // fn nom_test() {
-    //     assert_eq!(true, true);
-    // }
 
     #[test]
     fn test() {
@@ -270,5 +277,29 @@ $ ls
 5626152 d.ext
 7214296 k";
         assert_eq!(part1(input), Ok(95437));
+    }
+
+    fn read_file(file_name: &str) -> String {
+        return fs::read_to_string(file_name).expect("Unable to read the file");
+    }
+
+    // #[test]
+    fn should_work_with_nested_directories() {
+        let input = "$ cd /
+$ ls
+dir a
+$ cd a
+$ ls
+dir b
+$ cd b
+$ ls
+29116 f";
+        assert_eq!(part1(input), Ok(95437));
+    }
+
+    #[test]
+    fn part1_result() {
+        let input = read_file("resources/day7.txt");
+        assert_eq!(part1(&input), Ok(0));
     }
 }
