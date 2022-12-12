@@ -1,4 +1,7 @@
-enum Directions {
+use std::collections::HashSet;
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+enum Direction {
     Up,
     Down,
     Left,
@@ -34,6 +37,53 @@ fn updateTailPosition(head_position: Coords, tail_position: Coords) -> Option<Co
     } else {
         return panic!("Not handled");
     }
+}
+fn parse_input(input: &str) -> Vec<(Direction, i32)> {
+    input
+        .lines()
+        .flat_map(|line| line.split_once(" "))
+        .map(|(direction, number)| {
+            let dir = match direction {
+                "R" => Direction::Right,
+                "L" => Direction::Left,
+                "U" => Direction::Up,
+                "D" => Direction::Down,
+                unknonw => panic!("Unkown char {}", unknonw),
+            };
+            let num = number.parse().unwrap();
+            return (dir, num);
+        })
+        .collect()
+}
+
+fn part1(input: &str) -> i32 {
+    let instructions: Vec<Direction> = parse_input(input)
+        .into_iter()
+        .flat_map(|(direction, number)| vec![direction; number as usize].into_iter())
+        .collect();
+
+    let mut record_of_tail = HashSet::new();
+    let init_loc = (0, 4);
+    record_of_tail.insert(init_loc);
+    instructions.into_iter().fold(
+        (init_loc, init_loc),
+        |((head_x, head_y), tail_position), direction| {
+            let new_head = match direction {
+                Direction::Down => (head_x, head_y + 1),
+                Direction::Up => (head_x, head_y - 1),
+                Direction::Left => (head_x - 1, head_y),
+                Direction::Right => (head_x + 1, head_y),
+            };
+            match updateTailPosition(new_head, tail_position) {
+                Some(new_tail) => {
+                    record_of_tail.insert(new_tail);
+                    (new_head, new_tail)
+                }
+                None => (new_head, tail_position),
+            }
+        },
+    );
+    return record_of_tail.len() as i32;
 }
 
 mod tests {
@@ -92,6 +142,42 @@ mod tests {
 
         // middle left
         assert_eq!(updateTailPosition((0, 2), (2, 2)), Some((1, 2)));
+    }
+
+    #[test]
+    fn should_parse() {
+        let input = "R 4
+U 4
+L 3
+D 1";
+        assert_eq!(
+            parse_input(input),
+            Vec::from([
+                (Direction::Right, 4),
+                (Direction::Up, 4),
+                (Direction::Left, 3),
+                (Direction::Down, 1),
+            ])
+        )
+    }
+
+    #[test]
+    fn should_find_out_answer_for_part1() {
+        let input = "R 4
+U 4
+L 3
+D 1
+R 4
+D 1
+L 5
+R 2";
+        assert_eq!(part1(input), 13);
+    }
+
+    #[test]
+    fn part1_res() {
+        let input = &read_file("resources/day9.txt");
+        assert_eq!(part1(input), 6376);
     }
 
     fn read_file(file_name: &str) -> String {
