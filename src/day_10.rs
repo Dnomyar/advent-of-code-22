@@ -6,17 +6,40 @@ enum Instruction {
     Addx(i32),
 }
 
-fn interpret_instructions(instructions: Vec<Instruction>) -> HashMap<i32, i32> {
-    let mut instuction_deque: VecDeque<(i32, Instruction)> = VecDeque::from(
+type DelayBeforeInterpretation = i32;
+
+fn parse(input: &str) -> Vec<Instruction> {
+    input
+        .lines()
+        .map(|line| {
+            if line.contains("noop") {
+                Instruction::Noop
+            } else {
+                let (_, number_string) = line.split_once(" ").unwrap();
+                let number = number_string.parse::<i32>().unwrap();
+                Instruction::Addx(number)
+            }
+        })
+        .collect()
+}
+
+fn prefix_with_delay_before_interpretation(
+    instructions: Vec<Instruction>,
+) -> VecDeque<(DelayBeforeInterpretation, Instruction)> {
+    VecDeque::from(
         instructions
             .into_iter()
             .map(|instruction| match instruction {
                 Instruction::Noop => (0, instruction),
                 Instruction::Addx(_) => (1, instruction),
             })
-            .collect::<Vec<(i32, Instruction)>>(),
-    );
-    println!("{:?} {:?}", instuction_deque, instuction_deque.len());
+            .collect::<Vec<(DelayBeforeInterpretation, Instruction)>>(),
+    )
+}
+
+fn interpret_instructions(instructions: Vec<Instruction>) -> HashMap<i32, i32> {
+    let mut instuction_deque: VecDeque<(DelayBeforeInterpretation, Instruction)> =
+        prefix_with_delay_before_interpretation(instructions);
 
     let mut register_history = HashMap::new();
     let mut register = 1;
@@ -30,43 +53,23 @@ fn interpret_instructions(instructions: Vec<Instruction>) -> HashMap<i32, i32> {
                 }
             },
             Some((count, instruction)) => {
-                println!("instruction = {instruction:?}");
                 instuction_deque.push_front((count - 1, instruction));
             }
             None => break,
         };
-        println!("cycle = {cycle:?}, registry = {register:?}");
     }
     register_history
 }
 
 fn part1(input: &str) -> i32 {
-    let instructions: Vec<Instruction> = input
-        .lines()
-        .map(|line| {
-            if line.contains("noop") {
-                Instruction::Noop
-            } else {
-                let (_, number_string) = line.split_once(" ").unwrap();
-                let number = number_string.parse::<i32>().unwrap();
-                Instruction::Addx(number)
-            }
-        })
-        .collect();
+    let instructions: Vec<Instruction> = parse(input);
 
     let registry_history = interpret_instructions(instructions);
-
-    println!("{:?} {:?}", registry_history, registry_history.len());
 
     let intersting_cycles = vec![20, 60, 100, 140, 180, 220];
     intersting_cycles
         .into_iter()
-        .map(|cycle| {
-            let registry = registry_history[&cycle];
-            let res = cycle * registry;
-            println!("cycle = {cycle:?}, registry = {registry:?}, res = {res:?}");
-            res
-        })
+        .map(|cycle| cycle * registry_history[&cycle])
         .sum()
 }
 
